@@ -1,0 +1,412 @@
+{
+  "name": "AI Lead Capture and Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Leads",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What do you want?",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "742dd57a-38b1-414d-85b5-1026bda8f2bf",
+      "name": "On form submission",
+      "webhookId": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json['What do you want?'] }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "category",
+              "type": "string",
+              "description": "one of: hot, warm, cold",
+              "required": true
+            },
+            {
+              "name": "score",
+              "type": "number",
+              "description": "lead quality from 1 to 10",
+              "required": true
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "description": "one sentence explaining the category",
+              "required": true
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Classify this sales lead. Hot = clear need, specific problem, and urgency or budget signals. Warm = real interest but vague or no timeline. Cold = browsing, unrelated, or spam."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "dbe10bee-2f80-495f-9acb-ddc9d7565e06",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        176
+      ],
+      "id": "38039b17-9b40-457d-9cf6-0784b6e7994f",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now }}",
+            "Name": "={{ $('On form submission').item.json['Full Name'] }}",
+            "Email": "={{ $('On form submission').item.json.Email }}",
+            "Company": "={{ $('On form submission').item.json.Company }}",
+            "Need": "={{ $('On form submission').item.json['What do you want?'] }}",
+            "Category": "={{ $json.output.category }}",
+            "Score": "={{ $json.output.score }}",
+            "Reason": "={{ $json.output.reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Need",
+              "displayName": "Need",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        0
+      ],
+      "id": "276b2c64-fef3-491d-9b08-8fd8b1d83696",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Category }}",
+                    "rightValue": "hot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4c600b76-a2a0-4301-aa60-bc51f6912dee"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hot"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "ignoreCase": true,
+          "renameFallbackOutput": "Warm or Cold"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        768,
+        0
+      ],
+      "id": "0513b837-a0b8-4cf1-93ce-99b6a400cd1a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a friendly 4-sentence follow-up email to {{ $json.Name }} from {{ $json.Company }}. Here is what they asked for: {{ $json.Need }}. Offer a 15-minute call. Sign off as [Your Name]. Return only the email body, with no subject line, no preamble, and no markdown. Use plain text with a blank line between paragraphs.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1056,
+        -144
+      ],
+      "id": "6adfec97-b7a2-4e9b-915e-7b237cde05c3",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "a6f393fb-78f0-4778-aaa9-5aa5a4d86472",
+      "name": "Google Gemini Chat Model1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Switch').item.json.Email }}",
+        "subject": "Re: your inquiry",
+        "emailType": "html",
+        "message": "={{ $json.text.replace(/\\\\n\\s*/g, '\\n').trim().replace(/\\n/g, '<br>') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        -144
+      ],
+      "id": "11ed6400-57a6-4229-b011-bc485b56675e",
+      "name": "Email (Hot lead)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Thanks for reaching out",
+        "emailType": "text",
+        "message": "=Hi {{ $json.Name }},\n\nThanks for getting in touch with us. We've received your message and will review it shortly. If you have more details to share, just reply to this email.\n\nBest regards,\n[Your Name]",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        240
+      ],
+      "id": "c7f90af6-ccd2-478e-9b87-17592fc85308",
+      "name": "Email (Warm or Cold Lead)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email (Warm or Cold Lead)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Email (Hot lead)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
